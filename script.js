@@ -1,8 +1,3 @@
-// ======================================================
-// CONFIGURAÇÃO DO CANVAS
-// ======================================================
-
-// Pegamos o canvas do HTML
 const canvas = document.getElementById("jogo");
 
 // Pegamos o contexto 2D para desenhar
@@ -16,7 +11,7 @@ const ctx = canvas.getContext("2d");
 // Altura do chão
 const chaoY = 250;
 
-// Gravidade do pulo
+// Gravidade
 const gravidade = 0.7;
 
 // Força do pulo
@@ -27,17 +22,34 @@ const forcaPulo = -13;
 // CONFIGURAÇÕES DOS CACTOS
 // ======================================================
 
-// Velocidade inicial dos cactos
+// Velocidade inicial
 const velocidadeInicial = 5;
 
-// Velocidade que será usada atualmente
+// Velocidade atual
 let velocidadeCacto = velocidadeInicial;
 
-// A cada 100 pontos, aumenta um pouco a velocidade
+// Aumento da velocidade a cada 100 pontos
 const aumentoVelocidade = 0.5;
 
-// Limite para a velocidade não ficar impossível
+// Velocidade máxima
 const velocidadeMaxima = 8;
+
+
+// ======================================================
+// CONFIGURAÇÕES DOS VOADORES
+// ======================================================
+
+// Agora os voadores aparecem a cada 200 pontos
+const pontosParaVoador = 200;
+
+// Quantos pontos até aparecer outro
+const intervaloVoador = 200;
+
+// Quantidade máxima de voadores na tela
+const maximoVoador = 5;
+
+// Próxima pontuação que libera um voador
+let proximoPontoVoador = pontosParaVoador;
 
 
 // ======================================================
@@ -46,29 +58,37 @@ const velocidadeMaxima = 8;
 
 const dinossauro = {
     x: 100,
+
+    // Posição inicial
     y: chaoY - 57,
 
     // Velocidade vertical
     velocidadeY: 0,
 
-    // Diz se está pulando
-    pulando: false
+    // Está pulando?
+    pulando: false,
+
+    // Está agachado?
+    agachado: false
 };
 
 
 // ======================================================
-// LISTA DE CACTOS
+// LISTAS DOS OBJETOS
 // ======================================================
 
-// Guarda todos os cactos que estão na tela
+// Lista de cactos
 const cactos = [];
 
+// Lista de bichinhos voadores
+const voadores = [];
+
 
 // ======================================================
-// CONTROLE DO TEMPO DOS CACTOS
+// TEMPO DO PRÓXIMO CACTO
 // ======================================================
 
-// Tempo até aparecer o próximo cacto
+// Tempo até o próximo cacto
 let tempoProximoCacto = 1000;
 
 
@@ -76,21 +96,29 @@ let tempoProximoCacto = 1000;
 // PONTUAÇÃO
 // ======================================================
 
-// Pontuação começa em zero
+// Pontuação atual
 let pontuacao = 0;
 
-// Controle para fazer a pontuação subir com o tempo
+// Contador de tempo da pontuação
 let tempoPontuacao = 0;
 
-// Guarda quantos pontos já usamos para aumentar a velocidade
+// Último nível de velocidade usado
 let ultimoNivelDeVelocidade = 0;
 
 
 // ======================================================
-// CONTROLE DO GAME OVER
+// RECORDE
 // ======================================================
 
-// Quando for true, o jogo está parado
+// Pega o recorde salvo no navegador
+let recorde = Number(localStorage.getItem("recorde")) || 0;
+
+
+// ======================================================
+// GAME OVER
+// ======================================================
+
+// true = jogo parado
 let jogoTerminou = false;
 
 
@@ -102,7 +130,7 @@ function desenharChao() {
 
     ctx.fillStyle = "#333333";
 
-    // Desenha uma linha horizontal
+    // Linha do chão
     ctx.fillRect(
         0,
         chaoY,
@@ -118,8 +146,80 @@ function desenharChao() {
 
 function desenharDinossauro() {
 
-    // Cor do dinossauro
     ctx.fillStyle = "#333333";
+
+
+    // --------------------------------------------------
+    // DINOSSAURO AGACHADO
+    // --------------------------------------------------
+
+    if (dinossauro.agachado) {
+
+        // Corpo mais baixo
+        ctx.fillRect(
+            dinossauro.x,
+            dinossauro.y + 15,
+            38,
+            25
+        );
+
+        // Cabeça mais baixa
+        ctx.fillRect(
+            dinossauro.x + 25,
+            dinossauro.y + 5,
+            25,
+            20
+        );
+
+        // Pescoço
+        ctx.fillRect(
+            dinossauro.x + 20,
+            dinossauro.y + 12,
+            15,
+            12
+        );
+
+        // Perna esquerda
+        ctx.fillRect(
+            dinossauro.x + 6,
+            dinossauro.y + 35,
+            8,
+            8
+        );
+
+        // Perna direita
+        ctx.fillRect(
+            dinossauro.x + 24,
+            dinossauro.y + 35,
+            8,
+            8
+        );
+
+        // Cauda
+        ctx.fillRect(
+            dinossauro.x - 10,
+            dinossauro.y + 20,
+            15,
+            8
+        );
+
+        // Olho
+        ctx.fillStyle = "#ffffff";
+
+        ctx.fillRect(
+            dinossauro.x + 41,
+            dinossauro.y + 10,
+            4,
+            4
+        );
+
+        return;
+    }
+
+
+    // --------------------------------------------------
+    // DINOSSAURO NORMAL
+    // --------------------------------------------------
 
     // Corpo
     ctx.fillRect(
@@ -182,22 +282,21 @@ function desenharDinossauro() {
 
 
 // ======================================================
-// CRIAR UM CACTO
+// CRIAR CACTO
 // ======================================================
 
 function criarCacto() {
 
-    // Escolhe aleatoriamente entre um cacto baixo e um alto
+    // Escolhe uma altura aleatória
     const altura = Math.random() < 0.5 ? 30 : 50;
 
-    // Largura do cacto
     const largura = 15;
 
     const cacto = {
-        // Começa no lado direito da tela
+        // Começa no lado direito
         x: canvas.width,
 
-        // Coloca o cacto sobre o chão
+        // Fica apoiado no chão
         y: chaoY - altura,
 
         largura: largura,
@@ -210,7 +309,7 @@ function criarCacto() {
 
 
 // ======================================================
-// DESENHAR OS CACTOS
+// DESENHAR CACTOS
 // ======================================================
 
 function desenharCactos() {
@@ -219,10 +318,9 @@ function desenharCactos() {
 
         const cacto = cactos[i];
 
-        // Cor verde do cacto
         ctx.fillStyle = "#2e8b57";
 
-        // Tronco principal
+        // Tronco
         ctx.fillRect(
             cacto.x,
             cacto.y,
@@ -230,7 +328,7 @@ function desenharCactos() {
             cacto.altura
         );
 
-        // Os cactos altos recebem braços
+        // Braços nos cactos altos
         if (cacto.altura >= 50) {
 
             // Braço esquerdo
@@ -268,32 +366,129 @@ function desenharCactos() {
 
 
 // ======================================================
-// DESENHAR A PONTUAÇÃO
+// CRIAR BICHINHO VOADOR
+// ======================================================
+
+function criarVoador() {
+
+    // O voador agora nasce mais alto.
+    // Assim o dinossauro agachado consegue passar por baixo.
+    const y = 135 + Math.random() * 10;
+
+    const voador = {
+        x: canvas.width,
+        y: y,
+
+        largura: 30,
+        altura: 18
+    };
+
+    // Adiciona o voador
+    voadores.push(voador);
+}
+
+
+// ======================================================
+// TENTAR CRIAR VOADOR
+// ======================================================
+
+function tentarCriarVoador() {
+
+    // Não passa de 5 voadores
+    if (voadores.length >= maximoVoador) {
+        return;
+    }
+
+    // Verifica a pontuação
+    if (pontuacao < proximoPontoVoador) {
+        return;
+    }
+
+    // Antes de criar o voador, apagamos os cactos.
+    // Durante o voo, os cactos ficam fora do jogo.
+    cactos.length = 0;
+
+    // Cria o voador
+    criarVoador();
+
+    // O próximo voador será liberado 200 pontos depois
+    proximoPontoVoador += intervaloVoador;
+}
+
+
+// ======================================================
+// DESENHAR VOADORES
+// ======================================================
+
+function desenharVoadores() {
+
+    for (let i = 0; i < voadores.length; i++) {
+
+        const voador = voadores[i];
+
+        // Corpo
+        ctx.fillStyle = "#555555";
+
+        ctx.fillRect(
+            voador.x,
+            voador.y,
+            voador.largura,
+            voador.altura
+        );
+
+        // Asa de cima
+        ctx.fillRect(
+            voador.x + 5,
+            voador.y - 5,
+            10,
+            5
+        );
+
+        // Asa de baixo
+        ctx.fillRect(
+            voador.x + 15,
+            voador.y + voador.altura,
+            10,
+            5
+        );
+
+        // Olho
+        ctx.fillStyle = "#ffffff";
+
+        ctx.fillRect(
+            voador.x + 22,
+            voador.y + 4,
+            4,
+            4
+        );
+    }
+}
+
+
+// ======================================================
+// DESENHAR PONTUAÇÃO E RECORDE
 // ======================================================
 
 function desenharPontuacao() {
 
-    // Converte a pontuação para texto
-    // e completa com zeros até ficar com 5 dígitos.
-    //
-    // Exemplo:
-    // 5     -> 00005
-    // 25    -> 00025
-    // 125   -> 00125
-    // 1234  -> 01234
-    const textoPontuacao = String(pontuacao).padStart(5, "0");
+    const textoPontuacao =
+        String(pontuacao).padStart(5, "0");
 
-    // Cor da pontuação
+    const textoRecorde =
+        String(recorde).padStart(5, "0");
+
     ctx.fillStyle = "#333333";
 
-    // Fonte
     ctx.font = "20px Arial";
 
-    // Alinha o texto pela direita
     ctx.textAlign = "right";
 
-    // Desenha no canto superior direito
+    // Exemplo:
+    // HI 00340 00125
     ctx.fillText(
+        "HI " +
+        textoRecorde +
+        "  " +
         textoPontuacao,
         canvas.width - 15,
         25
@@ -302,123 +497,96 @@ function desenharPontuacao() {
 
 
 // ======================================================
-// ATUALIZAR A PONTUAÇÃO
-// ======================================================
-
-function atualizarPontuacao() {
-
-    // Faz o tempo passar
-    tempoPontuacao += 16;
-
-    // A cada 100 milissegundos, ganha 1 ponto
-    if (tempoPontuacao >= 100) {
-
-        pontuacao++;
-
-        // Zera o contador para começar novamente
-        tempoPontuacao = 0;
-    }
-
-
-    // Descobre em qual grupo de 100 pontos estamos
-    const nivelAtual = Math.floor(pontuacao / 100);
-
-    // Se chegou a um novo grupo de 100 pontos...
-    if (nivelAtual > ultimoNivelDeVelocidade) {
-
-        // Aumenta um pouco a velocidade
-        velocidadeCacto += aumentoVelocidade;
-
-        // Nunca deixa passar do limite
-        if (velocidadeCacto > velocidadeMaxima) {
-            velocidadeCacto = velocidadeMaxima;
-        }
-
-        // Guarda o novo nível
-        ultimoNivelDeVelocidade = nivelAtual;
-    }
-}
-
-
-// ======================================================
-// ATUALIZAR O DINOSSAURO
+// ATUALIZAR DINOSSAURO
 // ======================================================
 
 function atualizarDinossauro() {
 
-    // A gravidade aumenta a velocidade de queda
+    // Gravidade
     dinossauro.velocidadeY += gravidade;
 
-    // Atualiza a posição vertical
+    // Move verticalmente
     dinossauro.y += dinossauro.velocidadeY;
 
-    // Altura do dinossauro
-    const alturaDoDinossauro = 57;
+    // Altura depende de estar agachado
+    const alturaAtual =
+        dinossauro.agachado ? 40 : 57;
 
-    // Verifica se chegou ao chão
-    if (dinossauro.y + alturaDoDinossauro >= chaoY) {
+    // Verifica o chão
+    if (dinossauro.y + alturaAtual >= chaoY) {
 
-        // Coloca exatamente sobre o chão
-        dinossauro.y = chaoY - alturaDoDinossauro;
+        dinossauro.y =
+            chaoY - alturaAtual;
 
-        // Para o movimento vertical
         dinossauro.velocidadeY = 0;
 
-        // Diz que não está mais pulando
         dinossauro.pulando = false;
     }
 }
 
 
 // ======================================================
-// FAZER O DINOSSAURO PULAR
+// PULAR
 // ======================================================
 
 function pular() {
 
-    // Só permite pular quando está no chão
-    if (!dinossauro.pulando) {
+    // Só pula quando está no chão e não está agachado
+    if (
+        !dinossauro.pulando &&
+        !dinossauro.agachado
+    ) {
 
-        // Dá velocidade para cima
         dinossauro.velocidadeY = forcaPulo;
 
-        // Marca que está no ar
         dinossauro.pulando = true;
     }
 }
 
 
 // ======================================================
-// ATUALIZAR OS CACTOS
+// ATUALIZAR CACTOS
 // ======================================================
 
 function atualizarCactos() {
 
-    // Diminui o tempo até o próximo cacto
+    // --------------------------------------------------
+    // SE EXISTIR UM VOADOR, NÃO EXISTEM CACTOS
+    // --------------------------------------------------
+
+    if (voadores.length > 0) {
+
+        // Garante que não apareça nenhum cacto
+        cactos.length = 0;
+
+        return;
+    }
+
+
+    // Diminui o tempo
     tempoProximoCacto -= 16;
 
-    // Quando chega a zero, cria um novo cacto
+
+    // Cria um novo cacto
     if (tempoProximoCacto <= 0) {
 
         criarCacto();
 
-        // Escolhe um novo intervalo aleatório
-        // entre 800 e 1800 milissegundos
+        // Novo intervalo aleatório
         tempoProximoCacto =
             Math.random() * 1000 + 800;
     }
 
 
-    // Percorremos de trás para frente
-    // para remover os cactos com segurança
+    // Move os cactos
     for (let i = cactos.length - 1; i >= 0; i--) {
 
         const cacto = cactos[i];
 
-        // Move o cacto para a esquerda
+        // Anda para a esquerda
         cacto.x -= velocidadeCacto;
 
-        // Se saiu completamente da tela, remove
+        // Remove quando sai da tela
         if (cacto.x + cacto.largura < 0) {
 
             cactos.splice(i, 1);
@@ -428,39 +596,135 @@ function atualizarCactos() {
 
 
 // ======================================================
-// VERIFICAR COLISÃO
+// ATUALIZAR VOADORES
+// ======================================================
+
+function atualizarVoadores() {
+
+    // Primeiro verifica se precisa criar um voador
+    tentarCriarVoador();
+
+
+    // Move os voadores
+    for (let i = voadores.length - 1; i >= 0; i--) {
+
+        const voador = voadores[i];
+
+        // Move para a esquerda
+        voador.x -= velocidadeCacto;
+
+        // Se saiu da tela, remove
+        if (voador.x + voador.largura < 0) {
+
+            voadores.splice(i, 1);
+        }
+    }
+}
+
+
+// ======================================================
+// VERIFICAR COLISÃO ENTRE RETÂNGULOS
+// ======================================================
+
+function retangulosColidem(
+    aEsquerda,
+    aDireita,
+    aTopo,
+    aBaixo,
+    bEsquerda,
+    bDireita,
+    bTopo,
+    bBaixo
+) {
+
+    // Se os retângulos se sobrepõem,
+    // significa que houve uma colisão
+    return (
+        aDireita > bEsquerda &&
+        aEsquerda < bDireita &&
+        aBaixo > bTopo &&
+        aTopo < bBaixo
+    );
+}
+
+
+// ======================================================
+// VERIFICAR COLISÕES
 // ======================================================
 
 function verificarColisao() {
 
-    // Criamos um retângulo imaginário em volta do dinossauro
-    const dinossauroEsquerda = dinossauro.x - 10;
-    const dinossauroDireita = dinossauro.x + 45;
-    const dinossauroTopo = dinossauro.y;
-    const dinossauroBaixo = dinossauro.y + 57;
+    // O dinossauro fica menor quando agachado
+    const alturaDinossauro =
+        dinossauro.agachado ? 40 : 57;
 
-    // Verifica cada cacto
+
+    // Limites do dinossauro
+    const dinossauroEsquerda =
+        dinossauro.x - 10;
+
+    const dinossauroDireita =
+        dinossauro.x + 45;
+
+    const dinossauroTopo =
+        dinossauro.y;
+
+    const dinossauroBaixo =
+        dinossauro.y + alturaDinossauro;
+
+
+    // --------------------------------------------------
+    // COLISÃO COM CACTOS
+    // --------------------------------------------------
+
     for (let i = 0; i < cactos.length; i++) {
 
         const cacto = cactos[i];
 
-        // Limites do cacto
-        const cactoEsquerda = cacto.x;
-        const cactoDireita = cacto.x + cacto.largura;
-        const cactoTopo = cacto.y;
-        const cactoBaixo = cacto.y + cacto.altura;
+        const bateu = retangulosColidem(
+            dinossauroEsquerda,
+            dinossauroDireita,
+            dinossauroTopo,
+            dinossauroBaixo,
 
-        // Verifica se os dois retângulos se sobrepõem
-        const bateu =
-            dinossauroDireita > cactoEsquerda &&
-            dinossauroEsquerda < cactoDireita &&
-            dinossauroBaixo > cactoTopo &&
-            dinossauroTopo < cactoBaixo;
+            cacto.x,
+            cacto.x + cacto.largura,
+            cacto.y,
+            cacto.y + cacto.altura
+        );
 
-        // Se houve colisão, termina o jogo
         if (bateu) {
 
-            jogoTerminou = true;
+            finalizarJogo();
+
+            return;
+        }
+    }
+
+
+    // --------------------------------------------------
+    // COLISÃO COM VOADORES
+    // --------------------------------------------------
+
+    for (let i = 0; i < voadores.length; i++) {
+
+        const voador = voadores[i];
+
+        const bateu = retangulosColidem(
+            dinossauroEsquerda,
+            dinossauroDireita,
+            dinossauroTopo,
+            dinossauroBaixo,
+
+            voador.x,
+            voador.x + voador.largura,
+            voador.y,
+            voador.y + voador.altura
+        );
+
+        if (bateu) {
+
+            finalizarJogo();
 
             return;
         }
@@ -469,13 +733,90 @@ function verificarColisao() {
 
 
 // ======================================================
-// MOSTRAR GAME OVER
+// FINALIZAR O JOGO
+// ======================================================
+
+function finalizarJogo() {
+
+    jogoTerminou = true;
+
+    // Atualiza o recorde
+    if (pontuacao > recorde) {
+
+        recorde = pontuacao;
+
+        // Salva no navegador
+        localStorage.setItem(
+            "recorde",
+            recorde
+        );
+    }
+}
+
+
+// ======================================================
+// ATUALIZAR PONTUAÇÃO
+// ======================================================
+
+function atualizarPontuacao() {
+
+    // Faz o tempo passar
+    tempoPontuacao += 16;
+
+
+    // Aumenta a pontuação
+    if (tempoPontuacao >= 100) {
+
+        pontuacao++;
+
+        tempoPontuacao = 0;
+
+
+        // Atualiza o recorde
+        if (pontuacao > recorde) {
+
+            recorde = pontuacao;
+
+            localStorage.setItem(
+                "recorde",
+                recorde
+            );
+        }
+    }
+
+
+    // Descobre o nível de velocidade
+    const nivelAtual =
+        Math.floor(pontuacao / 100);
+
+
+    // Aumenta a velocidade a cada 100 pontos
+    if (nivelAtual > ultimoNivelDeVelocidade) {
+
+        velocidadeCacto += aumentoVelocidade;
+
+        // Limita a velocidade
+        if (velocidadeCacto > velocidadeMaxima) {
+
+            velocidadeCacto =
+                velocidadeMaxima;
+        }
+
+        ultimoNivelDeVelocidade =
+            nivelAtual;
+    }
+}
+
+
+// ======================================================
+// GAME OVER
 // ======================================================
 
 function desenharGameOver() {
 
-    // Coloca um fundo claro por cima do jogo
-    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    // Fundo claro
+    ctx.fillStyle =
+        "rgba(255, 255, 255, 0.8)";
 
     ctx.fillRect(
         0,
@@ -484,121 +825,171 @@ function desenharGameOver() {
         canvas.height
     );
 
+
     // Texto principal
     ctx.fillStyle = "#333333";
 
     ctx.textAlign = "center";
 
-    ctx.font = "bold 40px Arial";
+    ctx.font =
+        "bold 40px Arial";
 
     ctx.fillText(
         "Game Over",
         canvas.width / 2,
-        140
+        125
     );
 
-    // Mostra a pontuação final
+
+    // Pontuação
     ctx.font = "22px Arial";
 
-    const textoFinal = String(pontuacao).padStart(5, "0");
-
     ctx.fillText(
-        "Pontuação: " + textoFinal,
+        "Pontuação: " +
+        String(pontuacao).padStart(5, "0"),
         canvas.width / 2,
-        175
+        165
     );
 
-    // Mensagem para reiniciar
+
+    // Recorde
+    ctx.fillText(
+        "Recorde: " +
+        String(recorde).padStart(5, "0"),
+        canvas.width / 2,
+        195
+    );
+
+
+    // Mensagem
     ctx.font = "20px Arial";
 
     ctx.fillText(
         "Aperta espaço para jogar de novo",
         canvas.width / 2,
-        210
+        230
     );
 }
 
 
 // ======================================================
-// REINICIAR O JOGO
+// REINICIAR JOGO
 // ======================================================
 
 function reiniciarJogo() {
 
-    // Coloca o dinossauro na posição inicial
+    // Volta o dinossauro para o começo
     dinossauro.x = 100;
     dinossauro.y = chaoY - 57;
 
-    // Zera a velocidade vertical
+    // Zera movimento vertical
     dinossauro.velocidadeY = 0;
 
-    // Diz que não está pulando
+    // Volta ao estado normal
     dinossauro.pulando = false;
+    dinossauro.agachado = false;
 
 
-    // Apaga todos os cactos
+    // Apaga todos os objetos
     cactos.length = 0;
+    voadores.length = 0;
 
 
-    // Cria um novo intervalo para o primeiro cacto
+    // Novo intervalo do primeiro cacto
     tempoProximoCacto =
         Math.random() * 1000 + 800;
+
+
+    // Primeiro voador novamente aos 200 pontos
+    proximoPontoVoador = 200;
 
 
     // Zera a pontuação
     pontuacao = 0;
 
-    // Zera o contador do tempo da pontuação
     tempoPontuacao = 0;
 
-    // Volta a velocidade para o começo
-    velocidadeCacto = velocidadeInicial;
 
-    // Volta o nível da velocidade para zero
+    // Volta à velocidade inicial
+    velocidadeCacto =
+        velocidadeInicial;
+
     ultimoNivelDeVelocidade = 0;
 
 
-    // Libera o jogo
+    // O recorde continua salvo
     jogoTerminou = false;
 }
 
 
 // ======================================================
-// TECLADO
+// TECLADO - APERTAR
 // ======================================================
 
-document.addEventListener("keydown", function(evento) {
+document.addEventListener(
+    "keydown",
+    function(evento) {
 
-    // Se o jogo terminou e apertar Espaço,
-    // reinicia tudo
-    if (jogoTerminou && evento.code === "Space") {
+        // Espaço no Game Over reinicia
+        if (
+            jogoTerminou &&
+            evento.code === "Space"
+        ) {
 
-        evento.preventDefault();
+            evento.preventDefault();
 
-        reiniciarJogo();
+            reiniciarJogo();
 
-        return;
-    }
+            return;
+        }
 
 
-    // Durante o jogo, Espaço ou seta para cima fazem pular
-    if (
-        !jogoTerminou &&
-        (
+        // Não faz nada depois do Game Over
+        if (jogoTerminou) {
+            return;
+        }
+
+
+        // Espaço ou seta para cima = pular
+        if (
             evento.code === "Space" ||
             evento.code === "ArrowUp"
-        )
-    ) {
+        ) {
 
-        evento.preventDefault();
+            evento.preventDefault();
 
-        pular();
+            pular();
+        }
+
+
+        // S = agachar
+        if (evento.code === "KeyS") {
+
+            dinossauro.agachado = true;
+        }
     }
-});
+);
 
 
 // ======================================================
-// DESENHAR O JOGO
+// TECLADO - SOLTAR
+// ======================================================
+
+document.addEventListener(
+    "keyup",
+    function(evento) {
+
+        // Ao soltar S, volta ao normal
+        if (evento.code === "KeyS") {
+
+            dinossauro.agachado = false;
+        }
+    }
+);
+
+
+// ======================================================
+// DESENHAR TUDO
 // ======================================================
 
 function desenhar() {
@@ -611,19 +1002,22 @@ function desenhar() {
         canvas.height
     );
 
-    // Desenha o chão
+    // Chão
     desenharChao();
 
-    // Desenha o dinossauro
+    // Dinossauro
     desenharDinossauro();
 
-    // Desenha os cactos
+    // Cactos
     desenharCactos();
 
-    // Desenha a pontuação
+    // Voadores
+    desenharVoadores();
+
+    // Pontuação e recorde
     desenharPontuacao();
 
-    // Se o jogo terminou, mostra Game Over
+    // Game Over
     if (jogoTerminou) {
 
         desenharGameOver();
@@ -637,37 +1031,32 @@ function desenhar() {
 
 function loop() {
 
-    // Só atualiza o jogo enquanto ele estiver rodando
+    // Só atualiza se o jogo estiver funcionando
     if (!jogoTerminou) {
 
-        // Atualiza o dinossauro
         atualizarDinossauro();
 
-        // Atualiza os cactos
         atualizarCactos();
 
-        // Atualiza a pontuação
+        atualizarVoadores();
+
         atualizarPontuacao();
 
-        // Verifica colisões
         verificarColisao();
     }
 
     // Desenha tudo
     desenhar();
 
-    // Continua o loop
+    // Continua o jogo
     requestAnimationFrame(loop);
 }
 
 
 // ======================================================
-// INICIAR O JOGO
+// INICIAR
 // ======================================================
 
-// Faz o primeiro desenho
 desenhar();
 
-// Começa o loop principal
 loop();
-
